@@ -69,6 +69,7 @@ const runAction = () => {
 	const pkgRoot = getInput("package_root", true);
 	const buildScriptName = getInput("build_script_name", true);
 	const skipBuild = getInput("skip_build") === "true";
+	const skipRelease = getInput("skip_release") === "true";
 	const useVueCli = getInput("use_vue_cli") === "true";
 	const args = getInput("args") || "";
 	const maxAttempts = Number(getInput("max_attempts") || "1");
@@ -124,24 +125,27 @@ const runAction = () => {
 			}
 		}
 	}
-
-	log(`Building${release ? " and releasing" : ""} the Electron app…`);
-	const cmd = useVueCli ? "vue-cli-service electron:build" : "electron-builder";
-	for (let i = 0; i < maxAttempts; i += 1) {
-		try {
-			run(
-				`${useNpm ? "npx --no-install" : "yarn run"} ${cmd} --${platform} ${
-					release ? "--publish always" : ""
-				} ${args}`,
-				appRoot,
-			);
-			break;
-		} catch (err) {
-			if (i < maxAttempts - 1) {
-				log(`Attempt ${i + 1} failed:`);
-				log(err);
-			} else {
-				throw err;
+	if( skipRelease ) {
+			log("Skipping release script because `skip_release` option is set");
+	} else {
+		log(`Building${release ? " and releasing" : ""} the Electron app…`);
+		const cmd = useVueCli ? "vue-cli-service electron:build" : "electron-builder";
+		for (let i = 0; i < maxAttempts; i += 1) {
+			try {
+				run(
+					`${useNpm ? "npx --no-install" : "yarn run"} ${cmd} --${platform} ${
+						release ? "--publish always" : ""
+					} ${args}`,
+					appRoot,
+				);
+				break;
+			} catch (err) {
+				if (i < maxAttempts - 1) {
+					log(`Attempt ${i + 1} failed:`);
+					log(err);
+				} else {
+					throw err;
+				}
 			}
 		}
 	}
